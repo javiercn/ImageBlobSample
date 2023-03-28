@@ -1,0 +1,47 @@
+﻿@page "/"
+@inject NavigationManager Manager;
+@inject IJSRuntime JS;
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world!</h1>
+
+@for (int i = 0; i < _streams.Length; i++)
+{
+    var index = i;
+    <div style="padding:1em">
+        <img id="@($"img-{index}")" />
+    </div>
+}
+
+@code {
+    bool _newData = false;
+    DotNetStreamReference[] _streams = Array.Empty<DotNetStreamReference>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _streams = await Task.WhenAll(Enumerable.Range(0, 10).Select(GetImage));
+        _newData = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_newData)
+        {
+            for (int i = 0; i < _streams.Length; i++)
+            {
+                await JS.InvokeVoidAsync("setImage", $"img-{i}", _streams[i]).AsTask();
+            }
+
+            _newData = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<DotNetStreamReference> GetImage(int i)
+    {
+        var client = new HttpClient();
+        var stream = await client.GetStreamAsync($"https://dummyimage.com/450x2{i}0/f00/fff");
+        return new DotNetStreamReference(stream);
+    }
+}
